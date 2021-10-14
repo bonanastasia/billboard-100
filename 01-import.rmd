@@ -1,0 +1,84 @@
+---
+title: "Billboard Hot 100 Import."
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup}
+library(tidyverse)
+library(janitor)
+library(lubridate)
+```
+
+
+## Goals of this notebook
+
+Steps to prepare our data:
+
+- Download the data
+- Import into R
+- Clean up data types and columns
+- Export for next notebook
+
+## Dowloading data
+
+```{r download}
+# hot 100 download
+download.file("https://github.com/utdata/rwd-billboard-data/blob/main/data-process/hot-100/hot100-orig.csv?raw=true", "data-raw/hot-stuff.csv")
+```
+
+## Import data
+Importing data from the Billboard Hot 100 data set
+
+```{r import_data}
+hot100 <- read_csv("data-raw/hot-stuff.csv") %>% clean_names()
+
+# peek at the data
+hot100 %>% glimpse()
+```
+## Cleanup columns
+
+Use Janitor to make sure our data frames are nice and tidy
+## Fix our dates
+
+```{r date_fix}
+hot100_date <- hot100 %>% 
+  mutate(
+    week_id = mdy(week_id)
+  ) %>% 
+  
+  arrange(week_id, week_position)
+
+
+# peek at the result
+hot100_date %>% glimpse()
+```
+
+## print the table to look at data
+
+```{r print}
+hot100_date %>% head(10)
+```
+## Selecting columns
+Narrowing down the data set to only the columns needed for our analysis
+
+```{r select}
+hot100_tight <- hot100_date %>% 
+  select(
+    -url, 
+    -song_id,
+    -instance
+  )
+
+hot100_tight %>% glimpse()
+```
+
+## Exports
+Exporting clean data to .rds format
+
+```{r export}
+hot100_tight %>% 
+  write_rds("data-processed/01-hot100.rds")
+```
+

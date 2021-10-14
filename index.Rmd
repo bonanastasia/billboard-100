@@ -1,0 +1,165 @@
+---
+title: "Billboard analysis"
+output:
+  html_document:
+    theme: flatly
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    df_print: paged
+knit: (function(inputFile, encoding) { rmarkdown::render(inputFile, encoding = encoding, output_dir = "docs") })
+---
+
+## Exploring the Billboard Top 100 charts dataset
+
+- Who are the 10 performers with the most appearances on the Hot 100 chart at any position?
+- Which performer had the most songs reach No. 1?
+- Which performer had the most songs reach No. 1 in the most recent five years?
+- Which performer had the most Top 10 hits overall?
+- Which performer/song combination has been on the charts the most number of weeks at any position?
+- Which performer/song combination was No. 1 for the most number of weeks?
+
+## Setup
+
+```{r setup_environment, setup, echo=T, results='hide', message=F, warning=F}
+library(tidyverse)
+```
+
+## Import data
+
+```{r import_data}
+hot100 <- read_rds("data-processed/01-hot100.rds")
+
+# peek at the data
+glimpse(hot100)
+```
+
+## Analyze Most Appearances
+
+find artist with most appearances on charts
+
+```{r groupby_summarize_appearances}
+hot100 %>% 
+  group_by(performer) %>% # group by performer
+  summarize(
+    appearances = n()
+    ) %>% # count number of appearances on charts
+  arrange(appearances %>% desc()) %>% # arrange results from most to least appearances
+  head(10) # show top 10 results
+```
+
+### The easier way...
+
+Use count to find the same results
+
+```{r count_appearances}
+hot100 %>% 
+  count(performer, name ="appearances", sort = TRUE) %>% # count performers
+  head(10) # show top 10 results
+```
+
+## Most songs to reach No. 1
+
+use `group_by` and `summarize` to find artists with most songs to hit number 1
+
+```{r filter}
+hot100 %>% 
+  filter(week_position == 1) %>% # look for what hit number 1
+  distinct(song, performer) %>% # get unique entries
+  group_by(performer) %>% # group results by performer
+  summarise(no1hits = n()) %>% #count number of rows in groups, name new columns
+  arrange (no1hits %>% desc()) %>% # sorts from highest to lowest
+  filter(no1hits >= 7) #limit results to those with 7 or more hits
+```
+
+### Using count
+
+find same results using `count` now
+
+```{r}
+hot100 %>% 
+  filter(week_position == 1) %>% #filter to number 1 hits
+  distinct(song, performer) %>% # get unique entries
+  count(performer, name = "no1_hits", sort = TRUE) %>% # count by performer, sort top to bottom
+  filter(no1_hits >= 7) # limit to 7 or more
+```
+
+## No. 1 hits in last 5 years
+
+Find artists with the most number 1 hits in the last 5 years
+
+```{r}
+hot100 %>% 
+  filter(
+    week_position == 1,
+    week_id > "2015-12-31"
+  ) %>% #filter by number 1 hits of last 5 years
+  distinct(song, performer) %>%  # narrow to distinct entries
+  count(performer, name = "no1_hits", sort = TRUE) %>% # count number of entries
+  filter(no1_hits > 1) #filter to those that appear more than once
+```
+
+### Now use `summarize()` and `group_by()`
+
+```{r groupby_and_summarize} 
+hot100 %>% 
+  filter(
+    week_position == 1,
+    week_id > "2015-12-31"
+  ) %>% # filter by number 1 hits in last 5 years
+  distinct(performer, song) %>% # get unique entries
+  group_by(performer) %>% # group results by performer
+  summarise(no1_hits = n()) %>% # count each entries
+  filter(no1_hits > 1) %>% # filter by those that appear more than once
+  arrange(no1_hits %>% desc()) # sort most to least
+```
+
+## Top 10
+
+find what performers had the most top 10 hits over all time
+
+```{r}
+hot100 %>% 
+  filter(
+    week_position <= 10
+  ) %>% # filter for top 10 positions
+  distinct(song, performer) %>% # get unique entries
+  group_by(performer) %>% # group results by performer
+  summarize(number_top_hits = n()) %>% # summarize the amount of times each artist appeared on top ten
+  arrange(number_top_hits %>% desc()) %>% # sort by most to least appearances
+  filter(number_top_hits > 19) #limit the results logically
+```
+
+## Most appearances
+
+Finding which performer/song combination appeared on the charts the most number of weeks overall
+
+```{r}
+hot100 %>% 
+  count(song, performer, name = "weeks_on_charts", sort = TRUE) %>% # count times performer/song grouping appears
+  filter(weeks_on_charts > 63) # limit results
+```
+
+## Most weeks at No. 1
+
+Filter for the songs that spent the most weeks at number 1
+
+```{r}
+hot100 %>% 
+  filter(
+    week_position == 1 # get number 1 hits
+  ) %>% 
+  count(song, performer, name = "weeks_at_number_one", sort = TRUE) %>% # count times songs appeared at the position
+  filter(weeks_at_number_one > 13) # limit results
+```
+
+## Dig around a bit more...
+
+```{r}
+hot100 %>% 
+  filter(
+    week_position == 1 # get number 1 hits
+  ) %>% 
+  count(song, performer, name = "weeks_at_number_one", sort = TRUE) %>% # count times songs appeared at the position
+  filter(weeks_at_number_one > 13) # limit results
+```
